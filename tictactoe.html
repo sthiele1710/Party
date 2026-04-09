@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dart Tic Tac Toe</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+    body {
+        font-family: system-ui, sans-serif; background: #1a1a1a; color: white; margin: 0; padding: 10px; text-align: center; touch-action: manipulation; padding-bottom: 30px; box-sizing: border-box; min-height: 100vh;
+    }
+
+    #game-border {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; box-sizing: border-box; border: 0px solid transparent; transition: box-shadow 0.8s ease-in-out, border-color 0.8s ease-in-out;
+    }
+    
+    #game-border.turn-p1 { box-shadow: inset 0 0 50px rgba(255, 59, 59, 0.4); border: 4px solid rgba(255, 59, 59, 0.3); }
+    #game-border.turn-p2 { box-shadow: inset 0 0 50px rgba(0, 191, 255, 0.4); border: 4px solid rgba(0, 191, 255, 0.3); }
+    #game-border.winner-glow { box-shadow: inset 0 0 80px rgba(255, 215, 0, 0.7); border: 6px solid gold; }
+    #game-border.draw-glow { box-shadow: inset 0 0 80px rgba(200, 200, 200, 0.5); border: 6px solid #ccc; }
+
+    h1 { margin: 10px 0 5px 0; color: gold; font-size: 24px; position: relative; z-index: 1; }
+    #seriesInfo { font-size: 14px; color: #888; margin-bottom: 5px; font-weight: bold; position: relative; z-index: 2; }
+
+    #status {
+        margin: 10px auto; max-width: 420px; display: flex; justify-content: space-between; font-size: 16px; background: #333; padding: 10px; border-radius: 10px; position: relative; z-index: 1;
+    }
+    .player1 { color: #ff3b3b; font-weight: bold; }
+    .player2 { color: #00bfff; font-weight: bold; }
+
+    #throwsDisplay { margin: 10px 0; font-size: 18px; font-weight: bold; position: relative; z-index: 1; }
+
+    #controls { margin: 0 auto; max-width: 420px; position: relative; z-index: 1; }
+    #controls .row { display: flex; justify-content: center; gap: 6px; margin-bottom: 6px; }
+    #controls button {
+        flex: 1; padding: 12px; font-size: 15px; border: none; border-radius: 8px; background: #444; color: white; cursor: pointer; user-select: none;
+    }
+    #controls button:active { transform: scale(0.96); }
+    #controls button.active { background: gold; color: black; font-weight: bold; }
+
+    #winner {
+        font-size: 26px; margin: 15px 0; font-weight: bold; color: #00ff00; text-shadow: 0 0 10px rgba(0,255,0,0.5); min-height: 30px; position: relative; z-index: 1;
+    }
+
+    #board {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 420px; margin: 0 auto; position: relative; z-index: 1;
+    }
+    .cell {
+        background: #e0e0e0; color: black; border-radius: 6px; min-height: 90px; display: flex; flex-direction: column; justify-content: center; cursor: pointer; position: relative; user-select: none;
+    }
+    .number { font-size: 36px; font-weight: 900; color: #333; }
+    .x_hits { color: #ff3b3b; font-weight: bold; font-size: 14px; position: absolute; top: 5px; left: 0; width: 100%; }
+    .o_hits { color: #00bfff; font-weight: bold; font-size: 14px; position: absolute; bottom: 5px; left: 0; width: 100%; }
+    
+    .complete { font-size: 60px; font-weight: bold; line-height: 1; }
+    .complete.x { color: #ff3b3b; }
+    .complete.o { color: #00bfff; }
+    .winner-cell { background: #fff2a8; border: 3px solid gold; }
+
+    #passBtn {
+        padding: 15px; font-size: 18px; margin-top: 15px; border-radius: 8px; background-color: #2e7d32; color: white; font-weight: bold; max-width: 420px; width: 100%; border: none; cursor: pointer; position: relative; z-index: 1;
+    }
+    #passBtn:active { background-color: #1b5e20; transform: scale(0.98); }
+</style>
+</head>
+
+<body>
+
+<div id="game-border"></div>
+
+<h1>🎯 Tic Tac Toe</h1>
+<div id="seriesInfo"></div>
+
+<div id="status">
+    <span id="p1Label" class="player1">Spieler 1 (X)</span>
+    <span id="p2Label" class="player2">Spieler 2 (O)</span>
+</div>
+
+<div id="throwsDisplay">Würfe: 3</div>
+
+<div id="controls">
+    <div class="row">
+        <button id="singleBtn" onclick="setMultiplier(1)">Single</button>
+        <button id="doubleBtn" onclick="setMultiplier(2)">Double</button>
+        <button id="tripleBtn" onclick="setMultiplier(3)">Triple</button>
+    </div>
+    <div class="row">
+        <button onclick="confirmReset(false)">🔄 Neu</button>
+        <button onclick="confirmReset(true)">🔄 Neu (Bulls)</button>
+        <button onclick="undo()">↩️ Undo</button>
+        <button id="homeBtn" onclick="location.href='index.html'" style="background:#666;">🏠 Home</button>
+    </div>
+</div>
+
+<div id="winner"></div>
+
+<div id="board"></div>
+
+<button id="passBtn" onclick="passTurn()">⏭️ Zug beenden / Verfehlt</button>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const isTournament = urlParams.get('tournament') === 'true';
+
+let name1, name2;
+
+if (isTournament) {
+    name1 = localStorage.getItem('tournament_p1') || "T-Spieler 1";
+    name2 = localStorage.getItem('tournament_p2') || "T-Spieler 2";
+    document.getElementById('homeBtn').style.display = 'none';
+    
+    let s1 = urlParams.get('s1');
+    let s2 = urlParams.get('s2');
+    let target = urlParams.get('target');
+    if(s1 !== null) {
+        document.getElementById('seriesInfo').innerHTML = `Serie: <span style="color:#ff3b3b">${s1}</span> - <span style="color:#00bfff">${s2}</span> (First to ${target})`;
+    }
+} else {
+    name1 = localStorage.getItem('party_p1') || "Spieler 1";
+    name2 = localStorage.getItem('party_p2') || "Spieler 2";
+}
+
+let fieldNumbers=[], p1=Array(9).fill(0), p2=Array(9).fill(0);
+let currentPlayer=1, throwsLeft=3, multiplier=1;
+let gameOver=false, winningCombo=[], history=[];
+
+function confirmReset(hard) { if(confirm("Spiel neu starten?")) resetGame(hard); }
+
+function resetGame(hard=false) {
+    history = [];
+    let nums = [...Array(20).keys()].map(i=>i+1).concat([25]);
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    if (hard) {
+        const others = nums.filter(n=>n!==25);
+        shuffle(others); 
+        const selection = others.slice(0,8);
+        fieldNumbers = [...selection.slice(0,4), 25, ...selection.slice(4)];
+    } else {
+        shuffle(nums); 
+        fieldNumbers = nums.slice(0,9);
+    }
+    
+    p1.fill(0); p2.fill(0); currentPlayer=1; throwsLeft=3; multiplier=1; 
+    gameOver=false; winningCombo=[];
+    
+    document.getElementById("winner").textContent = ""; 
+    setMultiplier(1);
+    updateUI();
+}
+
+function snapshot() {
+    history.push(JSON.parse(JSON.stringify({
+        p1, p2, currentPlayer, throwsLeft, multiplier, gameOver, winningCombo
+    })));
+}
+
+function undo() {
+    if (!history.length) return;
+    const s = history.pop();
+    p1=s.p1; p2=s.p2; currentPlayer=s.currentPlayer; throwsLeft=s.throwsLeft;
+    multiplier=s.multiplier; gameOver=s.gameOver; winningCombo=s.winningCombo;
+    
+    document.getElementById("winner").textContent = gameOver ? (winningCombo.length > 0 ? `🏆 GEWINNER!` : "🤝 UNENTSCHIEDEN") : "";
+    updateUI();
+}
+
+function setMultiplier(m) {
+    if(gameOver) return;
+    multiplier = m;
+    document.getElementById("singleBtn").classList.toggle("active", m===1);
+    document.getElementById("doubleBtn").classList.toggle("active", m===2);
+    document.getElementById("tripleBtn").classList.toggle("active", m===3);
+}
+
+function updateUI() {
+    const p1Label = document.getElementById("p1Label");
+    const p2Label = document.getElementById("p2Label");
+    p1Label.textContent = `${name1} (X)`;
+    p2Label.textContent = `${name2} (O)`;
+    p1Label.style.opacity = currentPlayer === 1 ? "1" : "0.3";
+    p2Label.style.opacity = currentPlayer === 2 ? "1" : "0.3";
+
+    document.getElementById("throwsDisplay").textContent = `Würfe: ${throwsLeft}`;
+    
+    const border = document.getElementById("game-border");
+    if (gameOver) {
+        if (winningCombo.length > 0) {
+            border.className = "winner-glow";
+        } else {
+            border.className = "draw-glow"; 
+        }
+    } else {
+        border.className = (currentPlayer === 1) ? "turn-p1" : "turn-p2";
+    }
+
+    renderBoard();
+}
+
+function renderBoard() {
+    const board = document.getElementById("board");
+    board.innerHTML = "";
+    for (let i=0; i<9; i++) {
+        const c = document.createElement("div");
+        c.className = "cell";
+        if (winningCombo.includes(i)) c.classList.add("winner-cell");
+
+        if (p1[i] >= 4) {
+            c.innerHTML = `<div class="complete x">X</div>`;
+        } else if (p2[i] >= 4) {
+            c.innerHTML = `<div class="complete o">O</div>`;
+        } else {
+            c.innerHTML = `
+                <div class="x_hits">${"X".repeat(p1[i])}</div>
+                <div class="number">${fieldNumbers[i]}</div>
+                <div class="o_hits">${"O".repeat(p2[i])}</div>
+            `;
+        }
+        c.onclick = () => clickField(i);
+        board.appendChild(c);
+    }
+}
+
+function clickField(idx) {
+    if (gameOver) return;
+    if (p1[idx] >= 4 || p2[idx] >= 4) return;
+    if (fieldNumbers[idx] === 25 && multiplier === 3) return;
+
+    if(navigator.vibrate) navigator.vibrate(30);
+    snapshot();
+
+    if (currentPlayer === 1) p1[idx] = Math.min(4, p1[idx] + multiplier);
+    else p2[idx] = Math.min(4, p2[idx] + multiplier);
+
+    throwsLeft--;
+    endThrow();
+}
+
+function endThrow() {
+    multiplier = 1; setMultiplier(1);
+    checkWin();
+    if (!gameOver && throwsLeft === 0) {
+        currentPlayer = currentPlayer === 1 ? 2 : 1;
+        throwsLeft = 3;
+    }
+    updateUI();
+}
+
+function passTurn() {
+    if (gameOver) return;
+    snapshot(); throwsLeft = 0; endThrow();
+}
+
+function checkWin() {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    let winner = null;
+
+    for (const w of wins) {
+        if (w.every(i => p1[i] >= 4)) { winningCombo = w; winner = name1; }
+        else if (w.every(i => p2[i] >= 4)) { winningCombo = w; winner = name2; }
+    }
+
+    if (winner) {
+        gameOver = true;
+        document.getElementById("winner").textContent = `🏆 ${winner} GEWINNT!`;
+        document.getElementById("winner").style.color = "#00ff00";
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+
+        saveWin(winner);
+
+        if (isTournament) {
+            localStorage.setItem('tournament_winner_name', winner);
+            setTimeout(() => { window.location.href = "tournament.html"; }, 3000);
+            return; 
+        }
+        return;
+    }
+
+    const allClosed = fieldNumbers.every((_, i) => p1[i] >= 4 || p2[i] >= 4);
+    
+    if (allClosed) {
+        gameOver = true;
+        document.getElementById("winner").textContent = "🤝 UNENTSCHIEDEN!";
+        document.getElementById("winner").style.color = "#cccccc"; 
+        
+        if (isTournament) {
+            localStorage.setItem('tournament_winner_name', 'draw'); 
+            setTimeout(() => { window.location.href = "tournament.html"; }, 3000);
+            return;
+        }
+    }
+}
+
+function saveWin(winnerName) {
+    let stats = JSON.parse(localStorage.getItem('partyAllTimeStats') || '{}');
+    if (!stats[winnerName]) stats[winnerName] = { beerpong: 0, x01: 0, ttt: 0 };
+    stats[winnerName].ttt = (stats[winnerName].ttt || 0) + 1;
+    localStorage.setItem('partyAllTimeStats', JSON.stringify(stats));
+}
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) { try { await navigator.wakeLock.request('screen'); } catch (err) {} }
+}
+document.addEventListener('click', requestWakeLock, { once: true });
+
+resetGame();
+</script>
+</body>
+</html>
