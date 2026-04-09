@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>X01 Darts</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+    body { 
+        margin:0; font-family: system-ui, sans-serif; background:#1a1a1a; color:white; text-align:center; 
+        overflow: hidden; touch-action: manipulation; 
+        height: 100vh; width: 100vw;
+        display: flex; flex-direction: column; padding-bottom: 0;
+    }
+
+    #game-border {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;
+        box-sizing: border-box; border: 0px solid transparent; transition: box-shadow 0.8s ease-in-out, border-color 0.8s ease-in-out;
+    }
+    #game-border.turn-p1 { box-shadow: inset 0 0 50px rgba(255, 59, 59, 0.4); border: 4px solid rgba(255, 59, 59, 0.5); }
+    #game-border.turn-p2 { box-shadow: inset 0 0 50px rgba(0, 191, 255, 0.4); border: 4px solid rgba(0, 191, 255, 0.5); }
+    #game-border.winner-glow { box-shadow: inset 0 0 80px rgba(255, 215, 0, 0.6); border: 6px solid gold; }
+
+    .top-section { flex-shrink: 0; display: flex; flex-direction: column; }
+    .top-bar { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 10px; margin-bottom: 2px; }
+    .mode-select select { background: #333; color: white; border: 1px solid #555; padding: 4px 8px; border-radius: 5px; font-size: 16px; }
+    h1 { margin: 0; color: gold; font-size: 20px; line-height: 1; }
+    #seriesInfo { font-size: 12px; color: #888; font-weight: bold; margin-top: 2px;}
+    #roundDisplay { font-size: 14px; color: #aaa; font-weight: bold; margin-bottom: 5px;}
+
+    .scoreboard { display: flex; justify-content: space-around; margin: 0 0 5px 0; align-items: flex-start; }
+    .player-score { display: flex; flex-direction: column; width: 42%; padding: 8px 5px; border-radius: 12px; transition: 0.3s; position: relative; }
+    .player-score.active { background: #333; transform: scale(1.02); border: 2px solid gold; z-index: 10; }
+    .p-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; line-height: 1.1; opacity: 0.9; }
+    .p-points { font-size: 50px; font-weight: 800; line-height: 0.9; margin-bottom: 2px; z-index: 2; position: relative; }
+    .avg-display { font-size: 12px; color: #aaa; font-weight: bold; z-index: 1; margin-bottom: 4px; }
+
+    .info-wrapper { display: flex; flex-direction: column; justify-content: flex-start; margin-top: 0; }
+    .checkout-hint { font-size: 13px; color: #00ff00; font-weight: bold; line-height: 1.1; text-shadow: 0 0 5px rgba(0,255,0,0.3); min-height: 15px; margin-bottom: 1px;}
+    .mini-throws { display: flex; justify-content: center; gap: 4px; margin-top: 0; min-height: 22px; }
+    .throw-tag { font-size: 12px; font-weight: bold; color: gold; background: #222; padding: 2px 5px; border-radius: 4px; border: 1px solid #444; line-height: 1.2;}
+
+    .p1 .p-name { color: #ff3b3b; }
+    .p2 .p-name { color: #00bfff; }
+
+    #controls { max-width:440px; margin: 0 auto; padding: 0 10px; width: 100%; box-sizing: border-box; margin-bottom: 5px; }
+    .btn-row { display:flex; justify-content:center; gap:8px; margin-bottom:0; }
+    button { padding: 10px; font-size:14px; border-radius:8px; border:none; cursor:pointer; flex:1; background: #444; color: white; transition: 0.1s; user-select: none; }
+    button.active { background: gold; color: black; font-weight:bold; }
+    button.func { background: #555; padding: 8px; font-size: 12px; }
+    
+    #board-container { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; padding: 0 10px; box-sizing: border-box; }
+    #dartboard { width: 100%; height: 100%; max-width: 100%; max-height: 100%; display: block; }
+    
+    #next-turn-container { width: 100%; max-width:440px; margin: 5px auto 10px auto; padding: 0 10px; box-sizing: border-box; flex-shrink: 0; }
+    button.next-turn { background: #2e7d32; color: white; width: 100%; font-weight: bold; font-size: 18px; border: 1px solid #4caf50; padding: 15px; border-radius: 10px;}
+    
+    #winner { font-size:32px; margin:15px 0; font-weight:bold; color: #00ff00; text-shadow: 0 0 10px rgba(0,255,0,0.5); position:absolute; top: 40%; left:0; width:100%; z-index:100; pointer-events:none;}
+</style>
+</head>
+<body>
+
+<div id="game-border"></div>
+
+<div class="top-section">
+    <div class="top-bar">
+        <h1 id="mainTitle">🎯 X01</h1>
+        <div id="modeContainer" class="mode-select">
+            <select id="startScoreSelect" onchange="resetGame()">
+                <option value="301">301</option>
+                <option value="501" selected>501</option>
+            </select>
+        </div>
+    </div>
+    <div id="seriesInfo"></div>
+    <div id="roundDisplay">Runde: 1</div>
+
+    <div class="scoreboard">
+        <div id="p1-box" class="player-score p1 active">
+            <div class="p-name" id="name1">Spieler 1</div>
+            <div class="p-points" id="score1">501</div>
+            <div class="avg-display" id="avg1">Ø 0.0</div>
+            <div class="info-wrapper">
+                <div class="checkout-hint" id="checkout1"></div>
+                <div class="mini-throws" id="throws1"></div>
+            </div>
+        </div>
+        <div id="p2-box" class="player-score p2">
+            <div class="p-name" id="name2">Spieler 2</div>
+            <div class="p-points" id="score2">501</div>
+            <div class="avg-display" id="avg2">Ø 0.0</div>
+            <div class="info-wrapper">
+                <div class="checkout-hint" id="checkout2"></div>
+                <div class="mini-throws" id="throws2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="controls">
+      <div class="btn-row">
+        <button id="single" class="active" onclick="setMulti(1)">Single</button>
+        <button id="double" onclick="setMulti(2)">Double</button>
+        <button id="triple" onclick="setMulti(3)">Triple</button>
+      </div>
+      <div class="btn-row">
+        <button class="func" onclick="undo()">↩️ Undo</button>
+        <button class="func" onclick="confirmReset()">🔄 Reset</button>
+        <button class="func" id="homeBtn" onclick="location.href='index.html'">🏠 Home</button>
+      </div>
+    </div>
+</div>
+
+<div id="winner"></div>
+
+<div id="board-container">
+    <svg viewBox="-240 -240 480 480" id="dartboard">
+        <defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)"><rect width="5" height="10" fill="rgba(255,59,59,0.7)" /><rect x="5" width="5" height="10" fill="rgba(0,191,255,0.7)" /></pattern></defs>
+    </svg>
+</div>
+
+<div id="next-turn-container">
+    <button class="next-turn" onclick="nextTurn()">⏭️ Zug beenden / Verfehlt</button>
+</div>
+
+<script>
+const order=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+const ROTATION_OFFSET = -9;
+const BOARD_R = 180;
+const BULL_R = 38;
+
+const checkouts = {
+    170: "T20 T20 BULL", 167: "T20 T19 BULL", 164: "T20 T18 BULL", 161: "T20 T17 BULL", 160: "T20 T20 D20",
+    158: "T20 T20 D19", 157: "T20 T19 D20", 156: "T20 T20 D18", 155: "T20 T19 D19", 154: "T20 T18 D20",
+    153: "T20 T19 D18", 152: "T20 T20 D16", 151: "T20 T17 D20", 150: "T20 T18 D18", 149: "T20 T19 D16",
+    148: "T20 T16 D20", 147: "T20 T17 D18", 146: "T20 T18 D16", 145: "T20 T15 D20", 144: "T20 T20 D12",
+    143: "T20 T17 D16", 142: "T20 T14 D20", 141: "T20 T19 D12", 140: "T20 T16 D16", 139: "T19 T14 D20",
+    138: "T20 T18 D12", 137: "T19 T16 D16", 136: "T20 T20 D8", 135: "T20 T17 D12", 134: "T20 T14 D16",
+    133: "T20 T19 D8", 132: "T20 T16 D12", 131: "T20 T13 D16", 130: "T20 T18 D8", 129: "T19 T16 D12",
+    128: "T18 T14 D16", 127: "T20 T17 D8", 126: "T19 T19 D6", 125: "BULL T17 D12", 124: "T20 D16 D16",
+    123: "T19 T16 D9", 122: "T18 T20 D4", 121: "T20 T15 D8", 120: "T20 20 D20", 119: "T19 T10 D16",
+    118: "T20 T18 D2", 117: "T20 17 D20", 116: "T20 16 D20", 115: "T20 15 D20", 114: "T20 14 D20",
+    113: "T20 13 D20", 112: "T20 20 D16", 111: "T20 19 D16", 110: "T20 18 D16", 109: "T20 17 D16",
+    108: "T20 16 D16", 107: "T19 18 D16", 106: "T20 14 D16", 105: "T20 13 D16", 104: "T18 18 D16",
+    103: "T20 3 D20", 102: "T20 10 D16", 101: "T17 10 D20", 100: "T20 D20",
+    90: "T18 D18", 80: "T20 D10", 70: "T18 D8", 60: "20 D20", 50: "10 D20", 40: "D20", 36: "D18", 32: "D16", 20: "D10", 10: "D5", 4: "D2", 2: "D1"
+};
+
+function getCheckoutHint(score) {
+    if (checkouts[score]) return checkouts[score];
+    if (score > 170 || score < 2) return "";
+    if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
+    return "";
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const isTournament = urlParams.get('tournament') === 'true';
+const startParam = urlParams.get('starter');
+const initialPlayer = startParam ? parseInt(startParam) : 1;
+
+let startScore = 501;
+
+let name1, name2;
+if (isTournament) {
+    name1 = localStorage.getItem('tournament_p1') || "T1";
+    name2 = localStorage.getItem('tournament_p2') || "T2";
+    document.getElementById('homeBtn').style.display = 'none';
+    document.getElementById('modeContainer').style.display = 'none';
+    document.getElementById('mainTitle').style.display = 'none';
+    
+    let s1 = urlParams.get('s1');
+    let s2 = urlParams.get('s2');
+    let target = urlParams.get('target');
+    if(s1 !== null) {
+        document.getElementById('seriesInfo').innerHTML = `Serie: <span style="color:#ff3b3b">${s1}</span> - <span style="color:#00bfff">${s2}</span> (First to ${target})`;
+    }
+} else {
+    name1 = localStorage.getItem('party_p1') || "Spieler 1";
+    name2 = localStorage.getItem('party_p2') || "Spieler 2";
+}
+
+document.getElementById('name1').textContent = name1;
+document.getElementById('name2').textContent = name2;
+
+let scores = {1: 501, 2: 501};
+let startOfTurnScore = {1: 501, 2: 501};
+let stats = { 1: { throws: 0, points: 0 }, 2: { throws: 0, points: 0 } };
+
+let currentPlayer = initialPlayer;
+let currentRound = 1;
+let throwsLeft = 3;
+let multiplier = 1;
+let gameOver = false;
+let history = []; 
+let turnTotalPoints = 0;
+let roundThrows = { 1: [], 2: [] }; 
+let autoTurnTimer = null;
+
+function initGame() {
+    if(!isTournament) startScore = parseInt(document.getElementById('startScoreSelect').value);
+    
+    scores = {1: startScore, 2: startScore};
+    startOfTurnScore = {1: startScore, 2: startScore};
+    stats = { 1: { throws: 0, points: 0 }, 2: { throws: 0, points: 0 } };
+
+    currentPlayer = initialPlayer;
+    currentRound = 1;
+    document.getElementById('roundDisplay').textContent = "Runde: 1";
+
+    throwsLeft = 3;
+    multiplier = 1;
+    gameOver = false;
+    history = [];
+    roundThrows = { 1: [], 2: [] }; 
+    turnTotalPoints = 0;
+    
+    document.getElementById("winner").textContent = "";
+    setMulti(1);
+    updateUI();
+    drawBoard();
+}
+
+function snapshot() {
+    history.push(JSON.stringify({
+        scores: {...scores},
+        startOfTurnScore: {...startOfTurnScore},
+        stats: JSON.parse(JSON.stringify(stats)),
+        currentPlayer, throwsLeft, multiplier, gameOver,
+        roundThrows: JSON.parse(JSON.stringify(roundThrows)),
+        currentRound,
+        turnTotalPoints
+    }));
+}
+
+function undo() {
+    if(!history.length) return;
+    if(autoTurnTimer) clearTimeout(autoTurnTimer);
+    
+    const s = JSON.parse(history.pop());
+    scores = s.scores;
+    startOfTurnScore = s.startOfTurnScore;
+    stats = s.stats;
+    currentPlayer = s.currentPlayer;
+    throwsLeft = s.throwsLeft;
+    multiplier = s.multiplier;
+    gameOver = s.gameOver;
+    roundThrows = s.roundThrows;
+    currentRound = s.currentRound || 1;
+    turnTotalPoints = s.turnTotalPoints || 0;
+    
+    document.getElementById('roundDisplay').textContent = "Runde: " + currentRound;
+    updateUI();
+}
+
+function setMulti(m) {
+    if(gameOver) return; multiplier = m;
+    ["single","double","triple"].forEach(id=>document.getElementById(id).classList.remove("active"));
+    const btn = document.getElementById(m===1?"single":m===2?"double":"triple");
+    if(btn) btn.classList.add("active");
+}
+
+function formatThrow(m, n) {
+    if (n === 25) return m === 2 ? "D25" : "25";
+    if (m === 3) return "T" + n;
+    if (m === 2) return "D" + n;
+    return n.toString();
+}
+
+function announce(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        let msg = new SpeechSynthesisUtterance(text);
+        msg.lang = 'en-GB'; 
+        msg.rate = 1.1; 
+        let voices = window.speechSynthesis.getVoices();
+        let gbVoice = voices.find(v => v.lang.includes('GB') || v.lang.includes('uk'));
+        if (gbVoice) msg.voice = gbVoice;
+        window.speechSynthesis.speak(msg);
+    }
+}
+
+function nextTurn() {
+    if(gameOver) return;
+    if(autoTurnTimer) clearTimeout(autoTurnTimer);
+
+    snapshot();
+    
+    if(throwsLeft > 0) {
+        if(turnTotalPoints > 0) announce(turnTotalPoints.toString());
+        else announce("No Score");
+    }
+    
+    let nextP = currentPlayer === 1 ? 2 : 1;
+    if (nextP === initialPlayer) {
+        currentRound++;
+        document.getElementById('roundDisplay').textContent = "Runde: " + currentRound;
+    }
+    
+    currentPlayer = nextP;
+    roundThrows[currentPlayer] = [];
+    turnTotalPoints = 0;
+
+    throwsLeft = 3;
+    startOfTurnScore[currentPlayer] = scores[currentPlayer];
+    
+    multiplier = 1; 
+    setMulti(1); 
+    updateUI();
+}
+
+function throwDart(num) {
+    if(gameOver) return;
+    if(multiplier === 3 && num === 25) return;
+    if(navigator.vibrate) navigator.vibrate(30);
+    
+    if(autoTurnTimer) clearTimeout(autoTurnTimer);
+
+    snapshot();
+    
+    const points = num * multiplier;
+    let newScore = scores[currentPlayer] - points;
+    
+    roundThrows[currentPlayer].push(formatThrow(multiplier, num));
+    turnTotalPoints += points;
+
+    stats[currentPlayer].throws++;
+    stats[currentPlayer].points += points;
+
+    if (newScore === 0) {
+        scores[currentPlayer] = 0;
+        checkWin();
+    } else if (newScore < 0 || newScore === 1) { 
+        announce("No Score"); 
+        scores[currentPlayer] = startOfTurnScore[currentPlayer]; 
+        throwsLeft = 1; 
+        turnTotalPoints = 0; 
+    } else {
+        scores[currentPlayer] = newScore;
+    }
+
+    throwsLeft--;
+    
+    if(throwsLeft === 0 && !gameOver) {
+        if(newScore > 1) { 
+             announce(turnTotalPoints.toString());
+        }
+        autoTurnTimer = setTimeout(nextTurn, 1000); 
+    } else {
+        multiplier = 1; setMulti(1);
+        updateUI();
+    }
+}
+
+function checkWin() {
+    let winnerName = (currentPlayer === 1) ? name1 : name2;
+    document.getElementById("winner").textContent = `🏆 ${winnerName} CHECKOUT!`;
+    document.getElementById("score" + currentPlayer).textContent = "0";
+    
+    announce("Game Shot");
+    
+    gameOver = true;
+    document.getElementById('game-border').className = "winner-glow";
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+
+    saveWin(winnerName);
+
+    if(isTournament) {
+        localStorage.setItem('tournament_winner_name', winnerName);
+        setTimeout(() => { window.location.href = 'tournament.html'; }, 3000);
+        return;
+    }
+    updateUI();
+}
+
+function saveWin(winnerName) {
+    let stats = JSON.parse(localStorage.getItem('partyAllTimeStats') || '{}');
+    if (!stats[winnerName]) stats[winnerName] = { beerpong: 0, x01: 0, ttt: 0 };
+    stats[winnerName].x01 = (stats[winnerName].x01 || 0) + 1;
+    localStorage.setItem('partyAllTimeStats', JSON.stringify(stats));
+}
+
+function updateUI() {
+    document.getElementById("score1").textContent = scores[1];
+    document.getElementById("score2").textContent = scores[2];
+    
+    document.getElementById("checkout1").textContent = getCheckoutHint(scores[1]);
+    document.getElementById("checkout2").textContent = getCheckoutHint(scores[2]);
+
+    let avg1 = stats[1].throws > 0 ? (stats[1].points / stats[1].throws * 3).toFixed(1) : "0.0";
+    let avg2 = stats[2].throws > 0 ? (stats[2].points / stats[2].throws * 3).toFixed(1) : "0.0";
+    document.getElementById("avg1").textContent = "Ø " + avg1;
+    document.getElementById("avg2").textContent = "Ø " + avg2;
+
+    const p1Box = document.getElementById("p1-box");
+    const p2Box = document.getElementById("p2-box");
+    const border = document.getElementById('game-border');
+    
+    document.getElementById('throws1').innerHTML = "";
+    document.getElementById('throws2').innerHTML = "";
+
+    roundThrows[1].forEach(t => {
+        let tag = document.createElement("span");
+        tag.className = "throw-tag";
+        tag.textContent = t;
+        document.getElementById('throws1').appendChild(tag);
+    });
+
+    roundThrows[2].forEach(t => {
+        let tag = document.createElement("span");
+        tag.className = "throw-tag";
+        tag.textContent = t;
+        document.getElementById('throws2').appendChild(tag);
+    });
+
+    if(currentPlayer === 1) {
+        p1Box.classList.add("active"); p2Box.classList.remove("active");
+        if(!gameOver) border.className = "turn-p1";
+    } else {
+        p2Box.classList.add("active"); p1Box.classList.remove("active");
+        if(!gameOver) border.className = "turn-p2";
+    }
+}
+
+function drawBoard(){
+    const svg = document.getElementById("dartboard");
+    const defs = svg.querySelector("defs"); svg.innerHTML = ""; svg.appendChild(defs);
+    order.forEach((n, i) => {
+        const a1 = ((i * 18 + ROTATION_OFFSET) - 90) * Math.PI / 180;
+        const a2 = (((i + 1) * 18 + ROTATION_OFFSET) - 90) * Math.PI / 180;
+        const x1=BOARD_R*Math.cos(a1), y1=BOARD_R*Math.sin(a1), x2=BOARD_R*Math.cos(a2), y2=BOARD_R*Math.sin(a2);
+        const bg = document.createElementNS("http://www.w3.org/2000/svg","path");
+        bg.setAttribute("d",`M0,0 L${x1},${y1} A${BOARD_R},${BOARD_R} 0 0,1 ${x2},${y2} Z`);
+        bg.setAttribute("fill","#2a2a2a"); bg.setAttribute("stroke","#000"); svg.appendChild(bg);
+        
+        const lx = (BOARD_R + 35) * Math.cos((a1+a2)/2), ly = (BOARD_R + 35) * Math.sin((a1+a2)/2);
+        const txt = document.createElementNS("http://www.w3.org/2000/svg","text");
+        txt.setAttribute("x", lx); txt.setAttribute("y", ly);
+        txt.setAttribute("text-anchor","middle"); txt.setAttribute("alignment-baseline","middle");
+        txt.setAttribute("fill", "#666"); txt.setAttribute("font-weight", "bold");
+        txt.textContent = n; svg.appendChild(txt);
+
+        const click = document.createElementNS("http://www.w3.org/2000/svg","path");
+        click.setAttribute("d",`M0,0 L${x1},${y1} A${BOARD_R},${BOARD_R} 0 0,1 ${x2},${y2} Z`);
+        click.setAttribute("fill","transparent"); click.style.cursor="pointer";
+        click.onclick = () => throwDart(n); svg.appendChild(click);
+    });
+    const bBg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    bBg.setAttribute("r", BULL_R); bBg.setAttribute("fill", "#2a2a2a"); bBg.setAttribute("stroke","#000"); svg.appendChild(bBg);
+    const bClick = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    bClick.setAttribute("r", BULL_R); bClick.setAttribute("fill","transparent");
+    bClick.style.cursor="pointer"; bClick.onclick = () => throwDart(25); svg.appendChild(bClick);
+}
+
+function confirmReset() { if (confirm("Reset?")) resetGame(); }
+function resetGame(){ initGame(); }
+
+async function requestWakeLock() { if ('wakeLock' in navigator) { try { await navigator.wakeLock.request('screen'); } catch (err) {} } }
+document.addEventListener('click', requestWakeLock, { once: true });
+
+initGame();
+</script>
+</body>
+</html>
