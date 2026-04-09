@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Party Turnier Hub</title>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; background: #121212; color: white; text-align: center; padding-bottom: 20px;}
+        
+        .tab-nav { display: flex; background: #1f1f1f; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #333; }
+        .tab-nav button { flex: 1; padding: 15px; border: none; background: none; color: #888; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .tab-nav button.active { color: #ff4081; border-bottom: 3px solid #ff4081; } /* Party Pink */
+        
+        .content { padding: 20px; display: none; }
+        .content.active { display: block; }
+        
+        input { width: 100%; max-width: 300px; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; font-size: 16px; text-align: center; box-sizing: border-box;}
+        
+        .menu-btn { 
+            display: flex; justify-content: space-between; align-items: center;
+            background: #2a2a2a; color: white; text-decoration: none; 
+            padding: 20px; margin: 15px auto; max-width: 400px; border-radius: 12px; 
+            border-left: 8px solid #ff4081; font-weight: bold; font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .icon { font-size: 20px; color: #666; }
+
+        .tournament-btn {
+            border-left-color: gold; 
+            background: linear-gradient(90deg, #332b00 0%, #2a2a2a 100%);
+            margin-top: 40px;
+        }
+
+        table { width: 100%; max-width: 400px; margin: 20px auto; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 5px; border-bottom: 1px solid #333; text-align: center; }
+        td:first-child, th:first-child { text-align: left; padding-left: 10px;}
+        th { color: #ff4081; }
+    </style>
+</head>
+<body>
+
+    <div class="tab-nav">
+        <button id="btn-games" class="active" onclick="showTab('games')">Spiele</button>
+        <button id="btn-stats" onclick="showTab('stats')">Leaderboard</button>
+    </div>
+
+    <div id="games" class="content active">
+        <h1 style="color:#ff4081; margin-top:0;">🎉 Let's Play!</h1>
+        <p style="color: #aaa; font-size: 14px;">Für ein schnelles 1v1 Spiel:</p>
+        
+        <input type="text" id="p1Name" placeholder="Spieler/Team 1" oninput="saveNames()">
+        <input type="text" id="p2Name" placeholder="Spieler/Team 2" oninput="saveNames()">
+        
+        <div style="margin-top: 20px;">
+            <a href="beerpong.html" class="menu-btn" style="border-left-color: #ff9800;">
+                <span>🍺 Beerpong</span> <span class="icon">❯</span>
+            </a>
+            <a href="x01.html" class="menu-btn" style="border-left-color: #00ff00;">
+                <span>🎯 Darts: 301/501</span> <span class="icon">❯</span>
+            </a>
+            <a href="tictactoe.html" class="menu-btn" style="border-left-color: #00bfff;">
+                <span>❌ Darts: TicTacToe</span> <span class="icon">❯</span>
+            </a>
+            
+            <a href="tournament.html" class="menu-btn tournament-btn">
+                <span>🏆 Turniermodus starten</span> <span class="icon">❯</span>
+            </a>
+        </div>
+    </div>
+
+    <div id="stats" class="content">
+        <h1 style="color:gold; margin-top:0;">🏆 Hall of Fame</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>🍺</th> <th>🎯</th> <th>❌</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+        <button onclick="clearStats()" style="margin-top:30px; background:none; border:none; color:#555; font-size:12px; padding: 20px;">Statistiken zurücksetzen</button>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+            if(tabId === 'stats') renderLeaderboard();
+        }
+
+        function saveNames() {
+            localStorage.setItem('party_p1', document.getElementById('p1Name').value || 'Team 1');
+            localStorage.setItem('party_p2', document.getElementById('p2Name').value || 'Team 2');
+        }
+
+        window.onload = () => {
+            document.getElementById('p1Name').value = localStorage.getItem('party_p1') || '';
+            document.getElementById('p2Name').value = localStorage.getItem('party_p2') || '';
+            saveNames(); // Initiale Sicherung
+        };
+
+        function renderLeaderboard() {
+            const stats = JSON.parse(localStorage.getItem('partyAllTimeStats') || '{}');
+            const entries = Object.entries(stats);
+            
+            entries.sort((a, b) => {
+                const totalA = (a[1].beerpong || 0) + (a[1].x01 || 0) + (a[1].ttt || 0);
+                const totalB = (b[1].beerpong || 0) + (b[1].x01 || 0) + (b[1].ttt || 0);
+                return totalB - totalA;
+            });
+
+            document.getElementById('leaderboard-body').innerHTML = entries.map(([name, data]) => `
+                <tr>
+                    <td>${name}</td>
+                    <td>${data.beerpong || 0}</td>
+                    <td>${data.x01 || 0}</td>
+                    <td>${data.ttt || 0}</td>
+                </tr>`).join('');
+        }
+
+        function clearStats() {
+            if(confirm("Wirklich alle Statistiken löschen?")) {
+                localStorage.removeItem('partyAllTimeStats');
+                renderLeaderboard();
+            }
+        }
+    </script>
+</body>
+</html>
