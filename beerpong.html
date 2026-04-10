@@ -11,7 +11,6 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        /* Der Body bekommt jetzt das Bild als Hintergrund */
         body { 
             font-family: system-ui, sans-serif; 
             color: white; 
@@ -20,40 +19,57 @@
             display: flex; 
             flex-direction: column; 
             height: 100vh;
-            
-            /* Hier wird das Bild geladen und mit einem leichten dunklen Filter überlegt */
             background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.85)), url('beerpong_icon.png');
-            background-size: cover;      /* Zieht das Bild über den ganzen Bildschirm */
-            background-position: center; /* Zentriert das Bild */
+            background-size: cover;      
+            background-position: center; 
             background-repeat: no-repeat;
             background-attachment: fixed;
         }
         
         h1 { 
             color: #ff9800; 
-            margin-top: 30px; 
-            font-size: 30px;
-            text-shadow: 0 3px 6px rgba(0,0,0,0.8); /* Schatten für bessere Lesbarkeit */
+            margin-top: 15px; 
+            font-size: 26px;
+            text-shadow: 0 3px 6px rgba(0,0,0,0.8); 
         }
+
+        /* --- TOGGLE BUTTON --- */
+        #toggleBtn {
+            background: rgba(0, 0, 0, 0.5);
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin: 0 auto 10px auto;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #toggleBtn:active { transform: scale(0.95); background: rgba(255, 152, 0, 0.3); border-color: #ff9800; color: white;}
         
         .vs-container { 
             flex: 1; 
             display: flex; 
             flex-direction: column; 
             justify-content: center; 
-            padding: 20px; 
-            gap: 20px; 
+            padding: 10px 20px; 
+            gap: 15px; 
+            overflow-y: auto;
         }
+
+        .team-section { display: flex; flex-direction: column; align-items: center; gap: 15px; }
         
         .win-btn { 
-            padding: 30px; 
-            font-size: 24px; 
+            padding: 20px; 
+            font-size: 20px; 
             font-weight: bold; 
             border-radius: 15px; 
             border: none; 
             cursor: pointer; 
             transition: 0.2s;
             box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+            width: 100%;
+            max-width: 350px;
         }
         .win-btn:active { transform: scale(0.95); }
         
@@ -61,16 +77,37 @@
         #btn-p2 { background: linear-gradient(135deg, #00bfff, #0091ea); color: white; }
         
         .vs-text { 
-            font-size: 24px; 
+            font-size: 20px; 
             color: #ccc; 
             font-weight: bold; 
             text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            margin: 5px 0;
+        }
+
+        /* --- CUP TRACKER CSS --- */
+        .cup-triangle { display: none; flex-direction: column; align-items: center; gap: 2px; margin: 5px 0;}
+        .cup-row { display: flex; justify-content: center; gap: 4px; }
+        .cup { 
+            width: 35px; height: 35px; 
+            background: radial-gradient(circle at 30% 30%, #e53935, #b71c1c); /* Red Solo Cup Look */
+            border: 3px solid #f5f5f5; /* Weißer Rand oben */
+            border-radius: 50%; 
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        /* Wenn ein Becher getroffen wurde */
+        .cup.hit { 
+            opacity: 0.25; 
+            transform: scale(0.6); 
+            filter: grayscale(100%); 
+            border-color: #555;
         }
         
         #homeBtn { 
             padding: 15px; 
-            margin-bottom: 20px; 
-            background: rgba(42, 42, 42, 0.9); /* Leicht transparent */
+            margin: 10px auto 20px auto; 
+            background: rgba(42, 42, 42, 0.9); 
             color: white; 
             border: 1px solid #555; 
             border-radius: 8px; 
@@ -78,23 +115,34 @@
             font-size: 16px; 
             width: 80%; 
             max-width: 400px; 
-            align-self: center;
         }
     </style>
 </head>
 <body>
 
-    <h1>🍺 Wer hat gewonnen?</h1>
+    <h1>🍺 Beerpong</h1>
+    <button id="toggleBtn" onclick="toggleTracker()">⚙️ Becher-Tracker einblenden</button>
 
     <div class="vs-container">
-        <button id="btn-p1" class="win-btn" onclick="declareWinner(1)"></button>
+        
+        <div class="team-section">
+            <button id="btn-p1" class="win-btn" onclick="declareWinner(1)"></button>
+            <div id="tracker-1" class="cup-triangle"></div>
+        </div>
+
         <div class="vs-text">VS</div>
-        <button id="btn-p2" class="win-btn" onclick="declareWinner(2)"></button>
+
+        <div class="team-section">
+            <div id="tracker-2" class="cup-triangle"></div>
+            <button id="btn-p2" class="win-btn" onclick="declareWinner(2)"></button>
+        </div>
+
     </div>
 
     <button id="homeBtn" onclick="location.href='index.html'">🏠 Zurück zum Hub</button>
 
     <script>
+        // 1. Namen laden
         const urlParams = new URLSearchParams(window.location.search);
         const isTournament = urlParams.get('tournament') === 'true';
 
@@ -111,6 +159,55 @@
             document.getElementById('homeBtn').style.display = 'none';
         }
 
+        // 2. Becher Tracker Logik
+        let trackerActive = localStorage.getItem('party_beerpong_tracker') === 'true';
+
+        function buildCups() {
+            const layout1 = [4, 3, 2, 1]; // Basis an den Buttons
+            const layout2 = [1, 2, 3, 4]; // Spitze zeigt zur Mitte
+
+            createTriangle('tracker-1', layout1);
+            createTriangle('tracker-2', layout2);
+        }
+
+        function createTriangle(containerId, rowCounts) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            rowCounts.forEach(count => {
+                let row = document.createElement('div');
+                row.className = 'cup-row';
+                for(let i = 0; i < count; i++) {
+                    let cup = document.createElement('div');
+                    cup.className = 'cup';
+                    // Bei Klick: Vibration (Handy) und Hit-Animation
+                    cup.onclick = function() {
+                        if(navigator.vibrate) navigator.vibrate(20);
+                        this.classList.toggle('hit');
+                    };
+                    row.appendChild(cup);
+                }
+                container.appendChild(row);
+            });
+        }
+
+        function toggleTracker() {
+            trackerActive = !trackerActive;
+            localStorage.setItem('party_beerpong_tracker', trackerActive);
+            updateTrackerVisibility();
+        }
+
+        function updateTrackerVisibility() {
+            const displayStyle = trackerActive ? 'flex' : 'none';
+            document.getElementById('tracker-1').style.display = displayStyle;
+            document.getElementById('tracker-2').style.display = displayStyle;
+            document.getElementById('toggleBtn').innerText = trackerActive ? '❌ Becher-Tracker ausblenden' : '⚙️ Becher-Tracker einblenden';
+        }
+
+        // Initiale Darstellung
+        buildCups();
+        updateTrackerVisibility();
+
+        // 3. Gewinner Logik
         function declareWinner(playerNum) {
             const winnerName = playerNum === 1 ? name1 : name2;
             
@@ -121,6 +218,10 @@
             if (!stats[winnerName]) stats[winnerName] = { beerpong: 0, x01: 0, ttt: 0 };
             stats[winnerName].beerpong = (stats[winnerName].beerpong || 0) + 1;
             localStorage.setItem('partyAllTimeStats', JSON.stringify(stats));
+
+            // Knöpfe kurz deaktivieren, damit man nicht doppelt klickt
+            document.getElementById('btn-p1').disabled = true;
+            document.getElementById('btn-p2').disabled = true;
 
             if (isTournament) {
                 localStorage.setItem('tournament_winner_name', winnerName);
