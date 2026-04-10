@@ -36,35 +36,49 @@
 
     /* --- K.O. Baum Design --- */
     .bracket { 
-        display: flex; flex-direction: row; gap: 40px; overflow-x: auto; 
-        padding: 20px 10px; align-items: stretch; justify-content: flex-start; 
-        min-height: 400px;
+        display: flex; flex-direction: row; justify-content: center; align-items: stretch;
+        padding: 10px; overflow-x: auto; width: 100%; box-sizing: border-box;
     }
     .round { 
-        display: flex; flex-direction: column; gap: 20px; 
-        min-width: 220px; flex-shrink: 0; background: transparent; border: none; padding: 0;
-    }
-    .matches-container {
-        display: flex; flex-direction: column; justify-content: space-around; height: 100%; gap: 20px;
+        display: flex; flex-direction: column; flex: 1; min-width: 140px; max-width: 220px;
     }
     .round-title { 
-        font-weight: bold; color: #00bfff; margin-bottom: 10px; text-transform: uppercase; 
-        letter-spacing: 2px; font-size: 14px; text-align: center; background: #222; 
-        padding: 8px; border-radius: 8px; border: 1px solid #444;
+        font-weight: bold; color: #00bfff; margin-bottom: 0; text-transform: uppercase; 
+        letter-spacing: 2px; font-size: 12px; text-align: center; background: #222; 
+        padding: 8px; border-radius: 8px; border: 1px solid #444; z-index: 10; position: relative;
     }
-    .bracket-match { 
-        background: #333; padding: 15px; border-radius: 10px; text-align: center; 
-        border: 2px solid #444; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-        display: flex; flex-direction: column; justify-content: center; min-height: 90px;
+    .matches-container { 
+        display: flex; flex-direction: column; flex: 1; margin-top: 10px; 
+    }
+    
+    /* Gruppierung und Wrapper für die Verbindungslinien */
+    .match-pair { display: flex; flex-direction: column; flex: 1; position: relative; }
+    .match-wrapper { 
+        display: flex; flex-direction: column; justify-content: center; 
+        flex: 1; position: relative; padding: 10px 15px; 
+    }
+    
+    .bracket-match {
+        background: #333; padding: 10px; border-radius: 8px; text-align: center;
+        border: 2px solid #444; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        display: flex; flex-direction: column; justify-content: center; z-index: 2;
+        min-height: 70px;
     }
     .bracket-match.done { border-color: gold; }
-    
-    /* Die Verbindungslinien zwischen den Spielen! */
-    .round:not(:last-child) .bracket-match::after { 
-        content: ''; position: absolute; right: -22px; top: 50%; width: 20px; height: 2px; background: #666; 
+    .bracket-match button { padding: 8px; font-size: 12px; margin-top: 8px; }
+
+    /* Zeichnen der Linien! */
+    /* Linie vom Match nach Rechts (nur Runden VOR dem Finale) */
+    .round:not(:last-child) .match-wrapper::after {
+        content: ""; position: absolute; right: 0; top: 50%; width: 15px; height: 2px; background: #666;
     }
-    .round:not(:first-child) .bracket-match::before { 
-        content: ''; position: absolute; left: -22px; top: 50%; width: 20px; height: 2px; background: #666; 
+    /* Linie ins Match von Links (nur Runden NACH der ersten) */
+    .round:not(:first-child) .match-wrapper::before {
+        content: ""; position: absolute; left: 0; top: 50%; width: 15px; height: 2px; background: #666;
+    }
+    /* Vertikale Verbindungslinie zwischen zwei Spielen (außer beim Finale) */
+    .match-pair:not(.single)::before {
+        content: ""; position: absolute; right: 0; top: 25%; bottom: 25%; width: 2px; background: #666;
     }
 </style>
 </head>
@@ -273,37 +287,23 @@
             }
         });
 
-        // 1. Sortieren (inklusive direktem Vergleich)
         let sortedEntries = Object.entries(stats).sort((a, b) => {
-            if (b[1].w !== a[1].w) {
-                return b[1].w - a[1].w;
-            }
+            if (b[1].w !== a[1].w) return b[1].w - a[1].w;
             
-            // Tiebreaker: Direkter Vergleich
             let headToHeadMatch = tournament.matches.find(m => 
                 (m.p1 === a[0] && m.p2 === b[0]) || (m.p1 === b[0] && m.p2 === a[0])
             );
             
             if (headToHeadMatch && headToHeadMatch.winner && headToHeadMatch.winner !== 'draw') {
-                if (headToHeadMatch.winner === a[0]) {
-                    a[1].tiebreaker = true; // Markierung für das UI
-                    return -1; 
-                }
-                if (headToHeadMatch.winner === b[0]) {
-                    b[1].tiebreaker = true; // Markierung für das UI
-                    return 1;  
-                }
+                if (headToHeadMatch.winner === a[0]) { a[1].tiebreaker = true; return -1; }
+                if (headToHeadMatch.winner === b[0]) { b[1].tiebreaker = true; return 1; }
             }
             return 0;
         });
 
-        // 2. Tabelle aufbauen (Neue Info-Spalte)
         const tbody = document.getElementById('leagueTable');
-        
         tbody.innerHTML = sortedEntries.map(([name, s], index) => {
-            // Wenn der Tiebreaker gegriffen hat, zeige ein Icon/Text
             let infoText = s.tiebreaker ? `<span style="color:#aaa; font-size:12px;">⚖️ Direkter Vergleich</span>` : "";
-            
             return `<tr>
                 <td style="color:#888; width: 20px;">${index + 1}.</td>
                 <td style="font-weight:bold;">${name}</td>
@@ -313,7 +313,6 @@
             </tr>`;
         }).join('');
 
-        // 3. Spielliste aufbauen
         const list = document.getElementById('leagueMatches');
         list.innerHTML = tournament.matches.map((m, idx) => {
             if(m.winner === 'draw') {
@@ -328,10 +327,25 @@
 
     function initKnockout() {
         tournament.rounds = [];
-        let firstRound = [];
         let shuffled = [...tournament.players].sort(() => Math.random() - 0.5);
-        for(let i=0; i<shuffled.length; i+=2) firstRound.push({ p1: shuffled[i], p2: shuffled[i+1], winner: null });
-        tournament.rounds.push(firstRound);
+        let numPlayers = shuffled.length;
+        let numRounds = Math.log2(numPlayers);
+
+        // Generiere den KOMPLETTEN Baum im Voraus
+        for (let r = 0; r < numRounds; r++) {
+            let matchesInRound = numPlayers / Math.pow(2, r + 1);
+            let round = [];
+            for (let m = 0; m < matchesInRound; m++) {
+                if (r === 0) {
+                    // Runde 1 wird sofort mit den Spielern gefüllt
+                    round.push({ p1: shuffled[m * 2], p2: shuffled[m * 2 + 1], winner: null });
+                } else {
+                    // Zukünftige Runden erhalten leere Platzhalter
+                    round.push({ p1: null, p2: null, winner: null });
+                }
+            }
+            tournament.rounds.push(round);
+        }
     }
 
     function renderKnockout() {
@@ -344,36 +358,50 @@
             let roundDiv = document.createElement('div');
             roundDiv.className = 'round';
             
-            // Schönerer Titel für die Runden
             let titleStr = (round.length === 1) ? "🏆 Finale" : (round.length === 2) ? "Halbfinale" : `Runde ${rIdx + 1}`;
             let titleHtml = `<div class="round-title">${titleStr}</div>`;
             
-            let matchesHtml = round.map((match, mIdx) => {
-                let isDone = match.winner ? 'done' : '';
-                let html = `<div class="bracket-match ${isDone}">`;
+            let matchesHtml = "";
+            for (let i = 0; i < round.length; i += 2) {
+                let match1 = round[i];
+                let match2 = round[i+1];
+
+                let m1Html = createMatchHtml(match1, rIdx, i);
                 
-                if (match.winner) {
-                    // Wenn das Spiel vorbei ist
-                    html += `<div style="opacity:0.5; font-size: 13px; text-decoration: line-through; margin-bottom: 8px;">${match.p1} vs ${match.p2}</div>
-                             <div class="winner-text" style="font-size: 16px;">🏆 ${match.winner}</div>`;
+                // Gruppiere 2 Spiele zusammen für die perfekten Verbindungslinien
+                if (match2) {
+                    let m2Html = createMatchHtml(match2, rIdx, i+1);
+                    matchesHtml += `<div class="match-pair">${m1Html}${m2Html}</div>`;
                 } else {
-                    // Wenn das Spiel noch aussteht
-                    html += `<div style="font-weight: bold; font-size: 15px;">${match.p1 || '???'} <br><span style="color:#888; font-size:12px; font-weight:normal;">vs</span><br> ${match.p2 || '???'}</div>`;
-                    
-                    if (match.p1 && match.p2) {
-                        html += `<button class="start-match" onclick="playMatch('knockout', ${rIdx}, ${mIdx})" style="margin-top: 10px;">▶ Starten</button>`;
-                    } else {
-                         html += `<div style="color: #666; font-size: 12px; margin-top: 10px; font-style: italic;">Wartet auf Gegner...</div>`;
-                    }
+                    matchesHtml += `<div class="match-pair single">${m1Html}</div>`;
                 }
-                html += `</div>`;
-                return html;
-            }).join('');
+            }
             
-            // Die Matches kommen in einen Container, der sich in der Höhe verteilt
             roundDiv.innerHTML = titleHtml + `<div class="matches-container">${matchesHtml}</div>`;
             container.appendChild(roundDiv);
         });
+    }
+
+    function createMatchHtml(match, rIdx, mIdx) {
+        let isDone = match.winner ? 'done' : '';
+        let html = `<div class="match-wrapper"><div class="bracket-match ${isDone}">`;
+        
+        if (match.winner) {
+            html += `<div style="opacity:0.5; font-size: 13px; text-decoration: line-through; margin-bottom: 8px;">${match.p1} vs ${match.p2}</div>
+                     <div class="winner-text" style="font-size: 16px;">🏆 ${match.winner}</div>`;
+        } else {
+            let p1Name = match.p1 || '???';
+            let p2Name = match.p2 || '???';
+            html += `<div style="font-weight: bold; font-size: 15px;">${p1Name} <br><span style="color:#888; font-size:12px; font-weight:normal;">vs</span><br> ${p2Name}</div>`;
+            
+            if (match.p1 && match.p2) {
+                html += `<button class="start-match" onclick="playMatch('knockout', ${rIdx}, ${mIdx})">▶ Starten</button>`;
+            } else {
+                 html += `<div style="color: #666; font-size: 12px; margin-top: 10px; font-style: italic;">Wartet auf Gegner...</div>`;
+            }
+        }
+        html += `</div></div>`;
+        return html;
     }
 
     function playMatch(type, idx1, idx2) {
@@ -415,12 +443,20 @@
                 tournament.matches[tournament.currentMatchIndex].winner = winner;
             } else if(tournament.mode === 'knockout') {
                 let c = tournament.currentMatchIndex;
-                let round = tournament.rounds[c.r];
-                round[c.m].winner = winner;
-                if(round.every(m => m.winner) && round.length > 1) {
-                    let newRound = [];
-                    for(let i=0; i<round.length; i+=2) newRound.push({ p1: round[i].winner, p2: round[i+1].winner, winner: null });
-                    tournament.rounds.push(newRound);
+                let currentRound = tournament.rounds[c.r];
+                currentRound[c.m].winner = winner;
+                
+                // Advance the winner to the exact slot in the next round
+                if (c.r + 1 < tournament.rounds.length) {
+                    let nextRound = tournament.rounds[c.r + 1];
+                    let nextMatchIdx = Math.floor(c.m / 2);
+                    let isPlayer1 = (c.m % 2 === 0); // Oben = p1, Unten = p2
+                    
+                    if (isPlayer1) {
+                        nextRound[nextMatchIdx].p1 = winner;
+                    } else {
+                        nextRound[nextMatchIdx].p2 = winner;
+                    }
                 }
             } else if (tournament.mode === 'bestof') {
                 if (winner === tournament.players[0]) tournament.boScores[0]++;
