@@ -19,121 +19,96 @@
             display: flex; 
             flex-direction: column; 
             height: 100vh;
-            background: linear-gradient(rgba(18, 18, 18, 0.6), rgba(18, 18, 18, 0.85)), url('beerpong_icon.png');
+            background: linear-gradient(rgba(18, 18, 18, 0.7), rgba(18, 18, 18, 0.9)), url('beerpong_icon.png');
             background-size: cover;      
             background-position: center; 
             background-repeat: no-repeat;
             background-attachment: fixed;
+            box-sizing: border-box;
         }
         
-        h1 { 
-            color: #ff9800; 
-            margin-top: 15px; 
-            font-size: 26px;
-            text-shadow: 0 3px 6px rgba(0,0,0,0.8); 
-        }
+        .header-area { margin-top: 15px; }
+        h1 { color: #ff9800; margin: 0 0 10px 0; font-size: 26px; text-shadow: 0 3px 6px rgba(0,0,0,0.8); }
 
-        /* --- TOGGLE BUTTON --- */
         #toggleBtn {
-            background: rgba(0, 0, 0, 0.5);
-            color: #ccc;
-            border: 1px solid #555;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            margin: 0 auto 10px auto;
-            cursor: pointer;
-            transition: 0.2s;
+            background: rgba(0, 0, 0, 0.5); color: #ccc; border: 1px solid #555;
+            padding: 8px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: 0.2s;
         }
         #toggleBtn:active { transform: scale(0.95); background: rgba(255, 152, 0, 0.3); border-color: #ff9800; color: white;}
         
-        .vs-container { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            padding: 10px 20px; 
-            gap: 15px; 
-            overflow-y: auto;
+        /* --- DAS NEUE IPAD / TISCH LAYOUT --- */
+        .pong-table { 
+            flex: 1; display: flex; flex-direction: row; justify-content: space-between; align-items: center; 
+            padding: 20px; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto; box-sizing: border-box;
         }
 
-        .team-section { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .team-side { flex: 1; display: flex; justify-content: center; width: 100%;}
+        .center-area { 
+            display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 30px;
+        }
         
         .win-btn { 
-            padding: 20px; 
-            font-size: 20px; 
-            font-weight: bold; 
-            border-radius: 15px; 
-            border: none; 
-            cursor: pointer; 
-            transition: 0.2s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-            width: 100%;
-            max-width: 350px;
+            padding: 30px 20px; font-size: 22px; font-weight: bold; border-radius: 15px; border: none; cursor: pointer; 
+            transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.6); width: 100%; max-width: 250px;
         }
         .win-btn:active { transform: scale(0.95); }
-        
         #btn-p1 { background: linear-gradient(135deg, #ff4081, #c51162); color: white; }
         #btn-p2 { background: linear-gradient(135deg, #00bfff, #0091ea); color: white; }
         
-        .vs-text { 
-            font-size: 20px; 
-            color: #ccc; 
-            font-weight: bold; 
-            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-            margin: 5px 0;
-        }
+        .vs-text { font-size: 24px; color: #ccc; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin: 0 10px;}
 
-        /* --- CUP TRACKER CSS --- */
-        .cup-triangle { display: none; flex-direction: column; align-items: center; gap: 2px; margin: 5px 0;}
-        .cup-row { display: flex; justify-content: center; gap: 4px; }
+        /* --- CUP TRACKER (Top-Down Ansicht) --- */
+        .cup-triangle { display: none; flex-direction: row; align-items: center; gap: 4px; }
+        .cup-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+        
         .cup { 
-            width: 35px; height: 35px; 
-            background: radial-gradient(circle at 30% 30%, #e53935, #b71c1c); /* Red Solo Cup Look */
-            border: 3px solid #f5f5f5; /* Weißer Rand oben */
+            width: 40px; height: 40px; 
+            background: radial-gradient(circle at 30% 30%, #e53935, #b71c1c); 
+            border: 3px solid #f5f5f5; 
             border-radius: 50%; 
             box-shadow: inset -4px -4px 8px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
-        /* Wenn ein Becher getroffen wurde */
-        .cup.hit { 
-            opacity: 0.25; 
-            transform: scale(0.6); 
-            filter: grayscale(100%); 
-            border-color: #555;
-        }
+        .cup.hit { opacity: 0.25; transform: scale(0.6); filter: grayscale(100%); border-color: #555; }
         
         #homeBtn { 
-            padding: 15px; 
-            margin: 10px auto 20px auto; 
-            background: rgba(42, 42, 42, 0.9); 
-            color: white; 
-            border: 1px solid #555; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            width: 80%; 
-            max-width: 400px; 
+            padding: 15px; margin: 10px auto 20px auto; background: rgba(42, 42, 42, 0.9); 
+            color: white; border: 1px solid #555; border-radius: 8px; cursor: pointer; 
+            font-size: 16px; width: 80%; max-width: 400px; flex-shrink: 0;
+        }
+
+        /* --- RESPONSIVE FÜR HANDYS (Hochformat) --- */
+        @media (max-width: 768px) {
+            .pong-table { flex-direction: column; justify-content: center; gap: 30px; }
+            .center-area { flex-direction: column; gap: 15px; margin: 20px 0;}
+            /* Dreht die Becher wieder in die normale Richtung für kleine Bildschirme */
+            .cup-triangle { flex-direction: column !important; }
+            .cup-col { flex-direction: row !important; }
         }
     </style>
 </head>
 <body>
 
-    <h1>🍺 Beerpong</h1>
-    <button id="toggleBtn" onclick="toggleTracker()">⚙️ Becher-Tracker einblenden</button>
+    <div class="header-area">
+        <h1>🍺 Beerpong</h1>
+        <button id="toggleBtn" onclick="toggleTracker()">⚙️ Becher-Tracker einblenden</button>
+    </div>
 
-    <div class="vs-container">
+    <div class="pong-table">
         
-        <div class="team-section">
+        <div class="team-side">
             <button id="btn-p1" class="win-btn" onclick="declareWinner(1)"></button>
-            <div id="tracker-1" class="cup-triangle"></div>
         </div>
 
-        <div class="vs-text">VS</div>
-
-        <div class="team-section">
+        <div class="center-area" id="center-tracker-area">
+            <div id="tracker-1" class="cup-triangle"></div>
+            
+            <div class="vs-text">VS</div>
+            
             <div id="tracker-2" class="cup-triangle"></div>
+        </div>
+
+        <div class="team-side">
             <button id="btn-p2" class="win-btn" onclick="declareWinner(2)"></button>
         </div>
 
@@ -142,7 +117,6 @@
     <button id="homeBtn" onclick="location.href='index.html'">🏠 Zurück zum Hub</button>
 
     <script>
-        // 1. Namen laden
         const urlParams = new URLSearchParams(window.location.search);
         const isTournament = urlParams.get('tournament') === 'true';
 
@@ -152,41 +126,42 @@
         name1 = name1 || "Team 1";
         name2 = name2 || "Team 2";
 
-        document.getElementById('btn-p1').innerText = `🏆 ${name1} siegt!`;
-        document.getElementById('btn-p2').innerText = `🏆 ${name2} siegt!`;
+        document.getElementById('btn-p1').innerHTML = `🏆<br><br>${name1}<br>gewinnt!`;
+        document.getElementById('btn-p2').innerHTML = `🏆<br><br>${name2}<br>gewinnt!`;
 
         if (isTournament) {
             document.getElementById('homeBtn').style.display = 'none';
         }
 
-        // 2. Becher Tracker Logik
+        // --- Tracker Logik für Side-by-Side ---
         let trackerActive = localStorage.getItem('party_beerpong_tracker') === 'true';
 
         function buildCups() {
-            const layout1 = [4, 3, 2, 1]; // Basis an den Buttons
-            const layout2 = [1, 2, 3, 4]; // Spitze zeigt zur Mitte
+            // Team 1: Basis links, Spitze nach rechts
+            const layout1 = [4, 3, 2, 1]; 
+            // Team 2: Spitze nach links, Basis rechts
+            const layout2 = [1, 2, 3, 4]; 
 
             createTriangle('tracker-1', layout1);
             createTriangle('tracker-2', layout2);
         }
 
-        function createTriangle(containerId, rowCounts) {
+        function createTriangle(containerId, colCounts) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
-            rowCounts.forEach(count => {
-                let row = document.createElement('div');
-                row.className = 'cup-row';
+            colCounts.forEach(count => {
+                let col = document.createElement('div');
+                col.className = 'cup-col';
                 for(let i = 0; i < count; i++) {
                     let cup = document.createElement('div');
                     cup.className = 'cup';
-                    // Bei Klick: Vibration (Handy) und Hit-Animation
                     cup.onclick = function() {
                         if(navigator.vibrate) navigator.vibrate(20);
                         this.classList.toggle('hit');
                     };
-                    row.appendChild(cup);
+                    col.appendChild(cup);
                 }
-                container.appendChild(row);
+                container.appendChild(col);
             });
         }
 
@@ -201,25 +176,23 @@
             document.getElementById('tracker-1').style.display = displayStyle;
             document.getElementById('tracker-2').style.display = displayStyle;
             document.getElementById('toggleBtn').innerText = trackerActive ? '❌ Becher-Tracker ausblenden' : '⚙️ Becher-Tracker einblenden';
+            
+            // Wenn Tracker an ist, machen wir das VS Symbol etwas kleiner/dezenter
+            document.querySelector('.vs-text').style.fontSize = trackerActive ? '18px' : '24px';
         }
 
-        // Initiale Darstellung
         buildCups();
         updateTrackerVisibility();
 
-        // 3. Gewinner Logik
         function declareWinner(playerNum) {
             const winnerName = playerNum === 1 ? name1 : name2;
-            
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             
-            // Statistik speichern
             let stats = JSON.parse(localStorage.getItem('partyAllTimeStats') || '{}');
             if (!stats[winnerName]) stats[winnerName] = { beerpong: 0, x01: 0, ttt: 0 };
             stats[winnerName].beerpong = (stats[winnerName].beerpong || 0) + 1;
             localStorage.setItem('partyAllTimeStats', JSON.stringify(stats));
 
-            // Knöpfe kurz deaktivieren, damit man nicht doppelt klickt
             document.getElementById('btn-p1').disabled = true;
             document.getElementById('btn-p2').disabled = true;
 
