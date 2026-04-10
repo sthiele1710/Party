@@ -236,6 +236,7 @@
 
         let stats = {};
         tournament.players.forEach(p => stats[p] = {w:0, l:0});
+        
         tournament.matches.forEach(m => {
             if(m.winner && m.winner !== 'draw') {
                 stats[m.winner].w++;
@@ -244,9 +245,28 @@
             }
         });
 
+        // --- NEUE SORTIERLOGIK (Head-to-Head Tiebreaker) ---
+        let sortedEntries = Object.entries(stats).sort((a, b) => {
+            // 1. Primär nach Siegen sortieren
+            if (b[1].w !== a[1].w) {
+                return b[1].w - a[1].w;
+            }
+            
+            // 2. Tiebreaker: Direkter Vergleich (wer hat das Spiel zwischen den beiden gewonnen?)
+            let headToHeadMatch = tournament.matches.find(m => 
+                (m.p1 === a[0] && m.p2 === b[0]) || (m.p1 === b[0] && m.p2 === a[0])
+            );
+            
+            if (headToHeadMatch && headToHeadMatch.winner && headToHeadMatch.winner !== 'draw') {
+                if (headToHeadMatch.winner === a[0]) return -1; // a rückt nach oben
+                if (headToHeadMatch.winner === b[0]) return 1;  // b rückt nach oben
+            }
+            
+            return 0; // Keine Entscheidung (z.B. noch nicht gespielt)
+        });
+
         const tbody = document.getElementById('leagueTable');
-        tbody.innerHTML = Object.entries(stats).sort((a,b) => b[1].w - a[1].w)
-            .map(([name, s]) => `<tr><td>${name}</td><td>${s.w}</td><td>${s.l}</td></tr>`).join('');
+        tbody.innerHTML = sortedEntries.map(([name, s]) => `<tr><td>${name}</td><td>${s.w}</td><td>${s.l}</td></tr>`).join('');
 
         const list = document.getElementById('leagueMatches');
         list.innerHTML = tournament.matches.map((m, idx) => {
