@@ -25,7 +25,7 @@
             background-repeat: no-repeat;
             background-attachment: fixed;
             box-sizing: border-box;
-            overflow: hidden; /* Verhindert Scrollen auf dem iPad */
+            overflow: hidden;
         }
         
         .header-area { margin-top: 15px; flex-shrink: 0; }
@@ -38,13 +38,20 @@
         }
         .menu-btn:active { transform: scale(0.95); background: rgba(255, 152, 0, 0.3); border-color: #ff9800; color: white;}
         
-        /* --- IPAD / TISCH LAYOUT (Side-by-Side) --- */
+        /* --- IPAD / TISCH LAYOUT --- */
         .pong-table { 
             flex: 1; display: flex; flex-direction: row; justify-content: space-between; align-items: center; 
             padding: 20px; gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box;
+            transition: all 0.4s ease-in-out; /* Sanfte Animation beim Ein/Ausblenden */
+        }
+        
+        /* Die neue Klasse: Zieht alles in die Mitte, wenn Tracker AUS ist */
+        .pong-table.compact {
+            justify-content: center;
+            gap: 80px; 
         }
 
-        .team-side { display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 250px; }
+        .team-side { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 250px; }
         .win-btn { 
             padding: 30px 20px; font-size: 22px; font-weight: bold; border-radius: 15px; border: none; cursor: pointer; 
             transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.6); width: 100%;
@@ -57,16 +64,19 @@
             display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 20px;
         }
         
-        .vs-text { font-size: 24px; color: #ccc; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin: 0 10px; flex-shrink: 0;}
+        .vs-text { font-size: 24px; color: #ccc; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin: 0 10px; flex-shrink: 0; transition: 0.3s;}
 
-        /* --- CUP TRACKER & ZÄHLER (Jetzt horizontal & symmetrisch) --- */
+        /* --- CUP TRACKER & ZÄHLER --- */
         .tracker-wrapper { 
             display: none; 
-            flex-direction: row; /* Horizontal nebeneinander */
-            align-items: center; /* Vertikal zentriert */
+            flex-direction: row;
+            align-items: center;
             gap: 15px; 
             flex-shrink: 0;
+            animation: fadeIn 0.4s ease-in-out;
         }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
         .cup-count { font-size: 28px; font-weight: bold; color: gold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); width: 80px; text-align: center; }
         
         .cup-triangle { display: flex; flex-direction: row; align-items: center; gap: 4px; }
@@ -91,16 +101,14 @@
         /* --- RESPONSIVE FÜR HANDYS (Hochformat) --- */
         @media (max-width: 900px) {
             .pong-table { flex-direction: column; justify-content: center; gap: 30px; }
+            .pong-table.compact { gap: 40px; } /* Kompakterer Abstand auf dem Handy */
             .team-side { flex-direction: column-reverse; margin: 0; padding: 0;}
-            .team-side.top { flex-direction: column-reverse; }
             .center-area { flex-direction: column; gap: 10px; margin: 10px 0;}
             
-            /* Tracker auf Handys wieder vertikal */
             .tracker-wrapper { flex-direction: column; }
             .wrapper-p1 { flex-direction: column; }
             .wrapper-p2 { flex-direction: column-reverse; }
             
-            /* Dreht die Becher wieder in die normale Richtung für kleine Bildschirme */
             .cup-triangle { flex-direction: column !important; }
             .cup-col { flex-direction: row !important; }
         }
@@ -116,13 +124,13 @@
         </div>
     </div>
 
-    <div class="pong-table">
+    <div class="pong-table" id="pongTable">
         
-        <div class="team-side top">
+        <div class="team-side">
             <button id="btn-p1" class="win-btn" onclick="declareWinner(1)"></button>
         </div>
 
-        <div class="center-area" id="center-tracker-area">
+        <div class="center-area">
             
             <div class="tracker-wrapper wrapper-p1" id="wrapper-1">
                 <div class="cup-count" id="count-1">10 🍺</div>
@@ -138,7 +146,7 @@
 
         </div>
 
-        <div class="team-side bottom">
+        <div class="team-side">
             <button id="btn-p2" class="win-btn" onclick="declareWinner(2)"></button>
         </div>
 
@@ -163,13 +171,11 @@
             document.getElementById('homeBtn').style.display = 'none';
         }
 
-        // --- Tracker Logik (Side-by-Side Symmetrie) ---
+        // --- Tracker Logik ---
         let trackerActive = localStorage.getItem('party_beerpong_tracker') === 'true';
 
         function buildCups() {
-            // Team 1: Basis links, Spitze nach rechts
             const layout1 = [4, 3, 2, 1]; 
-            // Team 2: Spitze nach links, Basis rechts
             const layout2 = [1, 2, 3, 4]; 
             createTriangle('tracker-1', layout1);
             createTriangle('tracker-2', layout2);
@@ -190,7 +196,6 @@
                         this.classList.toggle('hit');
                         updateCounts(); 
                     };
-                    row = null; 
                     col.appendChild(cup);
                 }
                 container.appendChild(col);
@@ -226,9 +231,19 @@
             
             document.getElementById('toggleBtn').innerText = trackerActive ? '❌ Tracker ausblenden' : '⚙️ Tracker einblenden';
             document.getElementById('resetBtn').style.display = trackerActive ? 'inline-block' : 'none';
-            document.getElementById('vsText').style.fontSize = trackerActive ? '18px' : '24px';
             
-            if(trackerActive) updateCounts();
+            // Kompaktes Layout aktivieren/deaktivieren
+            const pongTable = document.getElementById('pongTable');
+            const vsText = document.getElementById('vsText');
+            
+            if (trackerActive) {
+                pongTable.classList.remove('compact');
+                vsText.style.fontSize = '18px';
+                updateCounts();
+            } else {
+                pongTable.classList.add('compact');
+                vsText.style.fontSize = '30px'; // Größeres VS wenn Platz da ist
+            }
         }
 
         buildCups();
