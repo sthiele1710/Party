@@ -51,7 +51,6 @@
         display: flex; flex-direction: column; flex: 1; margin-top: 10px; 
     }
     
-    /* Gruppierung und Wrapper für die Verbindungslinien */
     .match-pair { display: flex; flex-direction: column; flex: 1; position: relative; }
     .match-wrapper { 
         display: flex; flex-direction: column; justify-content: center; 
@@ -61,22 +60,21 @@
     .bracket-match {
         background: #333; padding: 10px; border-radius: 8px; text-align: center;
         border: 2px solid #444; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        display: flex; flex-direction: column; justify-content: center; z-index: 2;
-        min-height: 70px;
+        display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2;
+        /* HIER IST DER FIX: Strikte Höhe und Box-Sizing! */
+        height: 130px; 
+        box-sizing: border-box;
+        width: 100%;
     }
     .bracket-match.done { border-color: gold; }
-    .bracket-match button { padding: 8px; font-size: 12px; margin-top: 8px; }
+    .bracket-match button { padding: 8px; font-size: 12px; margin-top: 8px; width: 90%;}
 
-    /* Zeichnen der Linien! */
-    /* Linie vom Match nach Rechts (nur Runden VOR dem Finale) */
     .round:not(:last-child) .match-wrapper::after {
         content: ""; position: absolute; right: 0; top: 50%; width: 15px; height: 2px; background: #666;
     }
-    /* Linie ins Match von Links (nur Runden NACH der ersten) */
     .round:not(:first-child) .match-wrapper::before {
         content: ""; position: absolute; left: 0; top: 50%; width: 15px; height: 2px; background: #666;
     }
-    /* Vertikale Verbindungslinie zwischen zwei Spielen (außer beim Finale) */
     .match-pair:not(.single)::before {
         content: ""; position: absolute; right: 0; top: 25%; bottom: 25%; width: 2px; background: #666;
     }
@@ -331,16 +329,13 @@
         let numPlayers = shuffled.length;
         let numRounds = Math.log2(numPlayers);
 
-        // Generiere den KOMPLETTEN Baum im Voraus
         for (let r = 0; r < numRounds; r++) {
             let matchesInRound = numPlayers / Math.pow(2, r + 1);
             let round = [];
             for (let m = 0; m < matchesInRound; m++) {
                 if (r === 0) {
-                    // Runde 1 wird sofort mit den Spielern gefüllt
                     round.push({ p1: shuffled[m * 2], p2: shuffled[m * 2 + 1], winner: null });
                 } else {
-                    // Zukünftige Runden erhalten leere Platzhalter
                     round.push({ p1: null, p2: null, winner: null });
                 }
             }
@@ -368,7 +363,6 @@
 
                 let m1Html = createMatchHtml(match1, rIdx, i);
                 
-                // Gruppiere 2 Spiele zusammen für die perfekten Verbindungslinien
                 if (match2) {
                     let m2Html = createMatchHtml(match2, rIdx, i+1);
                     matchesHtml += `<div class="match-pair">${m1Html}${m2Html}</div>`;
@@ -392,12 +386,16 @@
         } else {
             let p1Name = match.p1 || '???';
             let p2Name = match.p2 || '???';
-            html += `<div style="font-weight: bold; font-size: 15px;">${p1Name} <br><span style="color:#888; font-size:12px; font-weight:normal;">vs</span><br> ${p2Name}</div>`;
+            html += `<div style="font-weight: bold; font-size: 15px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; width: 100%;">
+                        <div>${p1Name}</div>
+                        <div style="color:#888; font-size:12px; font-weight:normal; margin: 2px 0;">vs</div>
+                        <div>${p2Name}</div>
+                     </div>`;
             
             if (match.p1 && match.p2) {
                 html += `<button class="start-match" onclick="playMatch('knockout', ${rIdx}, ${mIdx})">▶ Starten</button>`;
             } else {
-                 html += `<div style="color: #666; font-size: 12px; margin-top: 10px; font-style: italic;">Wartet auf Gegner...</div>`;
+                 html += `<div style="color: #666; font-size: 12px; margin-top: 10px; font-style: italic;">Wartet...</div>`;
             }
         }
         html += `</div></div>`;
@@ -446,11 +444,10 @@
                 let currentRound = tournament.rounds[c.r];
                 currentRound[c.m].winner = winner;
                 
-                // Advance the winner to the exact slot in the next round
                 if (c.r + 1 < tournament.rounds.length) {
                     let nextRound = tournament.rounds[c.r + 1];
                     let nextMatchIdx = Math.floor(c.m / 2);
-                    let isPlayer1 = (c.m % 2 === 0); // Oben = p1, Unten = p2
+                    let isPlayer1 = (c.m % 2 === 0);
                     
                     if (isPlayer1) {
                         nextRound[nextMatchIdx].p1 = winner;
