@@ -235,7 +235,7 @@
         document.getElementById('leagueView').classList.remove('hidden');
 
         let stats = {};
-        tournament.players.forEach(p => stats[p] = {w:0, l:0});
+        tournament.players.forEach(p => stats[p] = {w:0, l:0, tiebreaker: false});
         
         tournament.matches.forEach(m => {
             if(m.winner && m.winner !== 'draw') {
@@ -245,29 +245,54 @@
             }
         });
 
-        // --- NEUE SORTIERLOGIK (Head-to-Head Tiebreaker) ---
+        // 1. Sortieren (inklusive direktem Vergleich)
         let sortedEntries = Object.entries(stats).sort((a, b) => {
-            // 1. Primär nach Siegen sortieren
             if (b[1].w !== a[1].w) {
                 return b[1].w - a[1].w;
             }
             
-            // 2. Tiebreaker: Direkter Vergleich (wer hat das Spiel zwischen den beiden gewonnen?)
+            // Tiebreaker: Direkter Vergleich
             let headToHeadMatch = tournament.matches.find(m => 
                 (m.p1 === a[0] && m.p2 === b[0]) || (m.p1 === b[0] && m.p2 === a[0])
             );
             
             if (headToHeadMatch && headToHeadMatch.winner && headToHeadMatch.winner !== 'draw') {
-                if (headToHeadMatch.winner === a[0]) return -1; // a rückt nach oben
-                if (headToHeadMatch.winner === b[0]) return 1;  // b rückt nach oben
+                if (headToHeadMatch.winner === a[0]) {
+                    a[1].tiebreaker = true; // Markierung für das UI
+                    return -1; 
+                }
+                if (headToHeadMatch.winner === b[0]) {
+                    b[1].tiebreaker = true; // Markierung für das UI
+                    return 1;  
+                }
             }
-            
-            return 0; // Keine Entscheidung (z.B. noch nicht gespielt)
+            return 0;
         });
 
+        // 2. Tabelle aufbauen (Neue Info-Spalte)
         const tbody = document.getElementById('leagueTable');
-        tbody.innerHTML = sortedEntries.map(([name, s]) => `<tr><td>${name}</td><td>${s.w}</td><td>${s.l}</td></tr>`).join('');
+        
+        // Tabellenkopf anpassen (mit neuer Spalte)
+        document.querySelector('#leagueTable').parentElement.innerHTML = `
+            <thead><tr><th>#</th><th>Name</th><th>S</th><th>N</th><th>Info</th></tr></thead>
+            <tbody id="leagueTable"></tbody>
+        `;
 
+        // Zeilen einfügen
+        document.getElementById('leagueTable').innerHTML = sortedEntries.map(([name, s], index) => {
+            // Wenn der Tiebreaker gegriffen hat, zeige ein Icon/Text
+            let infoText = s.tiebreaker ? `<span style="color:#aaa; font-size:12px;">⚖️ Direkter Vergleich</span>` : "";
+            
+            return `<tr>
+                <td style="color:#888; width: 20px;">${index + 1}.</td>
+                <td style="font-weight:bold;">${name}</td>
+                <td>${s.w}</td>
+                <td>${s.l}</td>
+                <td>${infoText}</td>
+            </tr>`;
+        }).join('');
+
+        // 3. Spielliste aufbauen
         const list = document.getElementById('leagueMatches');
         list.innerHTML = tournament.matches.map((m, idx) => {
             if(m.winner === 'draw') {
