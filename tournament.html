@@ -34,10 +34,38 @@
     .winner-text { color: gold; font-weight: bold; font-size: 12px;}
     .draw-text { color: #ccc; font-weight: bold; font-size: 12px; }
 
-    .bracket { display: flex; flex-direction: column; gap: 20px; overflow-x: auto; padding: 10px; }
-    .round { border: 1px solid #444; padding: 10px; border-radius: 10px; background: #222; }
-    .round-title { font-weight: bold; color: #00bfff; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-size: 12px;}
-    .bracket-match { background: #333; padding: 10px; margin: 10px 0; border-radius: 6px; text-align: center; }
+    /* --- K.O. Baum Design --- */
+    .bracket { 
+        display: flex; flex-direction: row; gap: 40px; overflow-x: auto; 
+        padding: 20px 10px; align-items: stretch; justify-content: flex-start; 
+        min-height: 400px;
+    }
+    .round { 
+        display: flex; flex-direction: column; gap: 20px; 
+        min-width: 220px; flex-shrink: 0; background: transparent; border: none; padding: 0;
+    }
+    .matches-container {
+        display: flex; flex-direction: column; justify-content: space-around; height: 100%; gap: 20px;
+    }
+    .round-title { 
+        font-weight: bold; color: #00bfff; margin-bottom: 10px; text-transform: uppercase; 
+        letter-spacing: 2px; font-size: 14px; text-align: center; background: #222; 
+        padding: 8px; border-radius: 8px; border: 1px solid #444;
+    }
+    .bracket-match { 
+        background: #333; padding: 15px; border-radius: 10px; text-align: center; 
+        border: 2px solid #444; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+        display: flex; flex-direction: column; justify-content: center; min-height: 90px;
+    }
+    .bracket-match.done { border-color: gold; }
+    
+    /* Die Verbindungslinien zwischen den Spielen! */
+    .round:not(:last-child) .bracket-match::after { 
+        content: ''; position: absolute; right: -22px; top: 50%; width: 20px; height: 2px; background: #666; 
+    }
+    .round:not(:first-child) .bracket-match::before { 
+        content: ''; position: absolute; left: -22px; top: 50%; width: 20px; height: 2px; background: #666; 
+    }
 </style>
 </head>
 <body>
@@ -97,7 +125,7 @@
 <div id="leagueView" class="hidden">
     <h2>Tabelle</h2>
     <table>
-        <thead><tr><th>Name</th><th>S</th><th>N</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>S</th><th>N</th><th>Info</th></tr></thead>
         <tbody id="leagueTable"></tbody>
     </table>
 
@@ -272,14 +300,7 @@
         // 2. Tabelle aufbauen (Neue Info-Spalte)
         const tbody = document.getElementById('leagueTable');
         
-        // Tabellenkopf anpassen (mit neuer Spalte)
-        document.querySelector('#leagueTable').parentElement.innerHTML = `
-            <thead><tr><th>#</th><th>Name</th><th>S</th><th>N</th><th>Info</th></tr></thead>
-            <tbody id="leagueTable"></tbody>
-        `;
-
-        // Zeilen einfügen
-        document.getElementById('leagueTable').innerHTML = sortedEntries.map(([name, s], index) => {
+        tbody.innerHTML = sortedEntries.map(([name, s], index) => {
             // Wenn der Tiebreaker gegriffen hat, zeige ein Icon/Text
             let infoText = s.tiebreaker ? `<span style="color:#aaa; font-size:12px;">⚖️ Direkter Vergleich</span>` : "";
             
@@ -322,19 +343,35 @@
         tournament.rounds.forEach((round, rIdx) => {
             let roundDiv = document.createElement('div');
             roundDiv.className = 'round';
-            let title = (round.length===1) ? "FINALE" : `Runde ${rIdx+1}`;
-            roundDiv.innerHTML = `<div class="round-title">${title}</div>`;
-            round.forEach((match, mIdx) => {
-                let html = `<div class="bracket-match">`;
-                if(match.winner) {
-                    html += `<div style="opacity:0.5">${match.p1} vs ${match.p2}</div><div class="winner-text">🏆 ${match.winner}</div>`;
+            
+            // Schönerer Titel für die Runden
+            let titleStr = (round.length === 1) ? "🏆 Finale" : (round.length === 2) ? "Halbfinale" : `Runde ${rIdx + 1}`;
+            let titleHtml = `<div class="round-title">${titleStr}</div>`;
+            
+            let matchesHtml = round.map((match, mIdx) => {
+                let isDone = match.winner ? 'done' : '';
+                let html = `<div class="bracket-match ${isDone}">`;
+                
+                if (match.winner) {
+                    // Wenn das Spiel vorbei ist
+                    html += `<div style="opacity:0.5; font-size: 13px; text-decoration: line-through; margin-bottom: 8px;">${match.p1} vs ${match.p2}</div>
+                             <div class="winner-text" style="font-size: 16px;">🏆 ${match.winner}</div>`;
                 } else {
-                    html += `<div>${match.p1||'?'} vs ${match.p2||'?'}</div>`;
-                    if(match.p1 && match.p2) html += `<button class="start-match" onclick="playMatch('knockout', ${rIdx}, ${mIdx})">Starten</button>`;
+                    // Wenn das Spiel noch aussteht
+                    html += `<div style="font-weight: bold; font-size: 15px;">${match.p1 || '???'} <br><span style="color:#888; font-size:12px; font-weight:normal;">vs</span><br> ${match.p2 || '???'}</div>`;
+                    
+                    if (match.p1 && match.p2) {
+                        html += `<button class="start-match" onclick="playMatch('knockout', ${rIdx}, ${mIdx})" style="margin-top: 10px;">▶ Starten</button>`;
+                    } else {
+                         html += `<div style="color: #666; font-size: 12px; margin-top: 10px; font-style: italic;">Wartet auf Gegner...</div>`;
+                    }
                 }
                 html += `</div>`;
-                roundDiv.innerHTML += html;
-            });
+                return html;
+            }).join('');
+            
+            // Die Matches kommen in einen Container, der sich in der Höhe verteilt
+            roundDiv.innerHTML = titleHtml + `<div class="matches-container">${matchesHtml}</div>`;
             container.appendChild(roundDiv);
         });
     }
