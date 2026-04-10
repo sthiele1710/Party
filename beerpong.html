@@ -25,9 +25,10 @@
             background-repeat: no-repeat;
             background-attachment: fixed;
             box-sizing: border-box;
+            overflow: hidden; /* Verhindert Scrollen auf dem iPad */
         }
         
-        .header-area { margin-top: 15px; }
+        .header-area { margin-top: 15px; flex-shrink: 0; }
         h1 { color: #ff9800; margin: 0 0 10px 0; font-size: 26px; text-shadow: 0 3px 6px rgba(0,0,0,0.8); }
 
         .btn-group { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;}
@@ -37,30 +38,36 @@
         }
         .menu-btn:active { transform: scale(0.95); background: rgba(255, 152, 0, 0.3); border-color: #ff9800; color: white;}
         
-        /* --- DAS IPAD / TISCH LAYOUT --- */
+        /* --- IPAD / TISCH LAYOUT (Side-by-Side) --- */
         .pong-table { 
             flex: 1; display: flex; flex-direction: row; justify-content: space-between; align-items: center; 
-            padding: 20px; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto; box-sizing: border-box;
+            padding: 20px; gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box;
         }
 
-        .team-side { flex: 1; display: flex; justify-content: center; width: 100%;}
-        .center-area { 
-            display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 20px;
-        }
-        
+        .team-side { display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 250px; }
         .win-btn { 
             padding: 30px 20px; font-size: 22px; font-weight: bold; border-radius: 15px; border: none; cursor: pointer; 
-            transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.6); width: 100%; max-width: 250px;
+            transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.6); width: 100%;
         }
         .win-btn:active { transform: scale(0.95); }
         #btn-p1 { background: linear-gradient(135deg, #ff4081, #c51162); color: white; }
         #btn-p2 { background: linear-gradient(135deg, #00bfff, #0091ea); color: white; }
         
-        .vs-text { font-size: 24px; color: #ccc; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin: 0 10px;}
+        .center-area { 
+            display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 20px;
+        }
+        
+        .vs-text { font-size: 24px; color: #ccc; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin: 0 10px; flex-shrink: 0;}
 
-        /* --- CUP TRACKER & ZÄHLER --- */
-        .tracker-wrapper { display: none; flex-direction: column; align-items: center; gap: 15px; }
-        .cup-count { font-size: 24px; font-weight: bold; color: gold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        /* --- CUP TRACKER & ZÄHLER (Jetzt horizontal & symmetrisch) --- */
+        .tracker-wrapper { 
+            display: none; 
+            flex-direction: row; /* Horizontal nebeneinander */
+            align-items: center; /* Vertikal zentriert */
+            gap: 15px; 
+            flex-shrink: 0;
+        }
+        .cup-count { font-size: 28px; font-weight: bold; color: gold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); width: 80px; text-align: center; }
         
         .cup-triangle { display: flex; flex-direction: row; align-items: center; gap: 4px; }
         .cup-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; }
@@ -82,11 +89,17 @@
         }
 
         /* --- RESPONSIVE FÜR HANDYS (Hochformat) --- */
-        @media (max-width: 768px) {
-            .pong-table { flex-direction: column; justify-content: center; gap: 20px; }
+        @media (max-width: 900px) {
+            .pong-table { flex-direction: column; justify-content: center; gap: 30px; }
+            .team-side { flex-direction: column-reverse; margin: 0; padding: 0;}
+            .team-side.top { flex-direction: column-reverse; }
             .center-area { flex-direction: column; gap: 10px; margin: 10px 0;}
-            /* Zähler über/unter die Dreiecke schieben */
-            .tracker-wrapper:nth-child(1) { flex-direction: column-reverse; }
+            
+            /* Tracker auf Handys wieder vertikal */
+            .tracker-wrapper { flex-direction: column; }
+            .wrapper-p1 { flex-direction: column; }
+            .wrapper-p2 { flex-direction: column-reverse; }
+            
             /* Dreht die Becher wieder in die normale Richtung für kleine Bildschirme */
             .cup-triangle { flex-direction: column !important; }
             .cup-col { flex-direction: row !important; }
@@ -105,27 +118,27 @@
 
     <div class="pong-table">
         
-        <div class="team-side">
+        <div class="team-side top">
             <button id="btn-p1" class="win-btn" onclick="declareWinner(1)"></button>
         </div>
 
-        <div class="center-area">
+        <div class="center-area" id="center-tracker-area">
             
-            <div class="tracker-wrapper" id="wrapper-1">
+            <div class="tracker-wrapper wrapper-p1" id="wrapper-1">
                 <div class="cup-count" id="count-1">10 🍺</div>
                 <div id="tracker-1" class="cup-triangle"></div>
             </div>
             
             <div class="vs-text" id="vsText">VS</div>
             
-            <div class="tracker-wrapper" id="wrapper-2">
+            <div class="tracker-wrapper wrapper-p2" id="wrapper-2">
                 <div id="tracker-2" class="cup-triangle"></div>
                 <div class="cup-count" id="count-2">10 🍺</div>
             </div>
 
         </div>
 
-        <div class="team-side">
+        <div class="team-side bottom">
             <button id="btn-p2" class="win-btn" onclick="declareWinner(2)"></button>
         </div>
 
@@ -150,11 +163,13 @@
             document.getElementById('homeBtn').style.display = 'none';
         }
 
-        // --- Tracker Logik ---
+        // --- Tracker Logik (Side-by-Side Symmetrie) ---
         let trackerActive = localStorage.getItem('party_beerpong_tracker') === 'true';
 
         function buildCups() {
+            // Team 1: Basis links, Spitze nach rechts
             const layout1 = [4, 3, 2, 1]; 
+            // Team 2: Spitze nach links, Basis rechts
             const layout2 = [1, 2, 3, 4]; 
             createTriangle('tracker-1', layout1);
             createTriangle('tracker-2', layout2);
@@ -173,8 +188,9 @@
                     cup.onclick = function() {
                         if(navigator.vibrate) navigator.vibrate(20);
                         this.classList.toggle('hit');
-                        updateCounts(); // Aktualisiert die Zahl bei jedem Klick!
+                        updateCounts(); 
                     };
+                    row = null; 
                     col.appendChild(cup);
                 }
                 container.appendChild(col);
