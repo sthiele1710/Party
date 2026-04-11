@@ -6,7 +6,10 @@
 <title>Turnier Modus</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a1a">
+
 <style>
     body { font-family: system-ui, sans-serif; background: #1a1a1a; color: white; margin: 0; padding: 20px; text-align: center; padding-bottom: 50px;}
     h1 { color: gold; margin-bottom: 20px; }
@@ -61,7 +64,6 @@
         background: #333; padding: 10px; border-radius: 8px; text-align: center;
         border: 2px solid #444; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2;
-        /* HIER IST DER FIX: Strikte Höhe und Box-Sizing! */
         height: 130px; 
         box-sizing: border-box;
         width: 100%;
@@ -78,6 +80,8 @@
     .match-pair:not(.single)::before {
         content: ""; position: absolute; right: 0; top: 25%; bottom: 25%; width: 2px; background: #666;
     }
+    
+    .btn-row { display: flex; gap: 10px; margin-top: 20px;}
 </style>
 </head>
 <body>
@@ -105,7 +109,11 @@
     <div id="nameInputs" style="margin-top:20px;"></div>
 
     <button class="primary" onclick="startTournament()">Starten</button>
-    <button onclick="location.href='index.html'">🏠 Home</button>
+    
+    <div class="btn-row">
+        <button onclick="location.href='index.html'" style="background:#444;">🏠 Home</button>
+        <button onclick="document.documentElement.requestFullscreen().catch(()=>{})" style="background:#555;">📱 Vollbild</button>
+    </div>
 </div>
 
 <div id="bestOfView" class="hidden">
@@ -175,12 +183,12 @@
             });
         } else if (mode === 'knockout') {
             label.innerText = "3. Spieler/Teams Anzahl";
-            opts = [4, 8, 16];
-            opts.forEach(n => {
+            // K.O. Modus erlaubt jetzt JEDE Zahl zwischen 4 und 16
+            for(let n = 4; n <= 16; n++) {
                 let opt = document.createElement('option');
                 opt.value = n; opt.innerText = n + " Teams";
                 sel.appendChild(opt);
-            });
+            }
         } else { 
             label.innerText = "3. Spieler/Teams Anzahl";
             opts = [3, 4, 5, 6, 7, 8]; 
@@ -323,23 +331,60 @@
         }).join('');
     }
 
+    // --- NEUE K.O. LOGIK FÜR FREILOSE (BYES) ---
     function initKnockout() {
         tournament.rounds = [];
         let shuffled = [...tournament.players].sort(() => Math.random() - 0.5);
         let numPlayers = shuffled.length;
-        let numRounds = Math.log2(numPlayers);
+        
+        // Finde die nächste Zweierpotenz (z.B. 5 -> 8, 11 -> 16)
+        let nextPow2 = Math.pow(2, Math.ceil(Math.log2(numPlayers)));
+        if (nextPow2 < 2) nextPow2 = 2; 
+        let numRounds = Math.log2(nextPow2);
 
+        // 1. Kompletten, leeren Baum generieren
         for (let r = 0; r < numRounds; r++) {
-            let matchesInRound = numPlayers / Math.pow(2, r + 1);
+            let matchesInRound = nextPow2 / Math.pow(2, r + 1);
             let round = [];
             for (let m = 0; m < matchesInRound; m++) {
-                if (r === 0) {
-                    round.push({ p1: shuffled[m * 2], p2: shuffled[m * 2 + 1], winner: null });
-                } else {
-                    round.push({ p1: null, p2: null, winner: null });
-                }
+                round.push({ p1: null, p2: null, winner: null });
             }
             tournament.rounds.push(round);
+        }
+
+        // 2. Berechne Freilose und mixe sie in Runde 1
+        let byes = nextPow2 - numPlayers;
+        let normalMatches = (numPlayers - byes) / 2;
+        
+        // Verteile Freilose zufällig über die erste Runde
+        let r0Types = Array(normalMatches).fill(true).concat(Array(byes).fill(false));
+        r0Types.sort(() => Math.random() - 0.5);
+
+        let pIdx = 0;
+
+        for (let m = 0; m < nextPow2 / 2; m++) {
+            if (r0Types[m]) {
+                // Echtes Match mit zwei Teams
+                tournament.rounds[0][m].p1 = shuffled[pIdx++];
+                tournament.rounds[0][m].p2 = shuffled[pIdx++];
+            } else {
+                // Freilos (Ein Team kommt sofort eine Runde weiter)
+                let luckyPlayer = shuffled[pIdx++];
+                tournament.rounds[0][m].p1 = luckyPlayer;
+                tournament.rounds[0][m].p2 = "Freilos 🎁";
+                tournament.rounds[0][m].winner = luckyPlayer;
+
+                // Schiebe das Team sofort ins nächste Match
+                if (numRounds > 1) {
+                    let nextMatchIdx = Math.floor(m / 2);
+                    let isPlayer1 = (m % 2 === 0);
+                    if (isPlayer1) {
+                        tournament.rounds[1][nextMatchIdx].p1 = luckyPlayer;
+                    } else {
+                        tournament.rounds[1][nextMatchIdx].p2 = luckyPlayer;
+                    }
+                }
+            }
         }
     }
 
